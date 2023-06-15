@@ -38,7 +38,7 @@ from .mappings import (
     reduce_from_model_parallel_region,
     scatter_to_model_parallel_region,
 )
-from .utils import VocabUtility, divide_and_check_no_remainder
+from .utils import VocabUtility, divide_and_check_no_remainder,divide_and_check_split
 
 
 def _initialize_affine_weight(
@@ -69,7 +69,8 @@ def _initialize_affine_weight(
     init_method(master_weight)
 
     # Split and copy
-    per_partition_per_stride_size = divide_and_check_no_remainder(per_partition_size, stride)
+    #per_partition_per_stride_size = divide_and_check_no_remainder(per_partition_size, stride)
+    per_partition_per_stride_size=divide_and_check_split(in_features if partition_dim else  out_features,world_size)
     weight_list = torch.split(master_weight, per_partition_per_stride_size, dim=partition_dim)
     rank = get_model_parallel_rank()
     my_weight_list = weight_list[rank::world_size]
@@ -254,7 +255,10 @@ class ColumnParallelLinear(torch.nn.Module):
         self.gather_output = gather_output
         # Divide the weight matrix along the last dimension.
         world_size = get_model_parallel_world_size()
-        self.output_size_per_partition = divide_and_check_no_remainder(out_features, world_size)
+        rank=get_model_parallel_rank()
+        #self.output_size_per_partition = divide_and_check_no_remainder(out_features, world_size)
+        tmp=divide_and_check_split(out_features, world_size)
+        self.output_size_per_partition =if isinstance(tmp,int) else tmp[rank]
 
         # Parameters.
         # Note: torch.nn.functional.linear performs XA^T + b and as a result
