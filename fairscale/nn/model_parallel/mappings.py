@@ -76,8 +76,18 @@ def _gather(input_: torch.Tensor) -> torch.Tensor:
     last_dim = input_.dim() - 1
     rank = torch.distributed.get_rank(group=group)
     world_size = torch.distributed.get_world_size(group=group)
-
-    tensor_list = [torch.empty_like(input_) for _ in range(world_size)]
+    ###########################old version work only for same dim tensor#############################################
+    #tensor_list = [torch.empty_like(input_) for _ in range(world_size)]
+    ########################new version works for not same dim tensor (only finale tensor has smaller dim tensor)####################################
+    tmp_size=input_.shape
+    global_max_size=torch.tensor(tmp_size).int().to(input_.device)
+    global_min_size=torch.tensor(tmp_size).int().to(input_.device)
+    torch.distributed.all_reduce(global_max_size,op=torch.distributed.ReduceOp.MAX)
+    torch.distributed.all_reduce(global_min_size,op=torch.distributed.ReduceOp.MIN)
+    max_int_size=global_max_size.int().tolist()
+    min_int_size=global_min_size.int().tolist()
+    tensor_list=[torch.zeros(max_int_size).to(input_) if idx!=world_size-1 else torch.zeros(min_int_size).to(input_) for idx in range(world_size)]
+    ##########################################################
     tensor_list[rank] = input_
     torch.distributed.all_gather(tensor_list, input_, group=group)
 
