@@ -35,7 +35,16 @@ def divide_and_check_no_remainder(numerator: int, denominator: int) -> int:
     the division value."""
     ensure_divisibility(numerator, denominator)
     return numerator // denominator
-
+def divide_and_check_split(numerator: int, denominator: int) -> int:
+    """If that numerator is divisible by the denominator and return
+    the division value, else return a split list like [5,5,5,3]"""
+    if numerator % denominator == 0:
+        return numerator // denominator
+    tmp_numerator=numerator+(denominator-numerator% denominator)
+    split_list=[tmp_numerator//denominator for _ in range(denominator-1)]
+    split_list.append(tmp_numerator//denominator -(denominator-numerator% denominator))
+    #print("{}-{}-{}".format(numerator,denominator,split_list))
+    return split_list
 
 def split_tensor_along_last_dim(
     tensor: torch.Tensor, num_partitions: int, contiguous_split_chunks: bool = False
